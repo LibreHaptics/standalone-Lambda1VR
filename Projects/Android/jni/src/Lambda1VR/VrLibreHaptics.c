@@ -221,8 +221,8 @@ static LH_EventPacket lh_make_packet(
 static void lh_log_debug(const char *tag, const LH_EventPacket *pkt) {
     if (!g_lh.debug_logging || !pkt) return;
 #ifndef LH_STANDALONE_TEST
-    MsgDev(D_INFO, "[LH] %s bus=%u zone=%u pos=(%.2f,%.2f,%.2f) spread=%.2f E=%.2f sharp=%.2f f=%.0fHz d=%.0fms\n",
-           tag, pkt->bus_id, pkt->zone_hint,
+    MsgDev(D_INFO, "[LH] %s hash=0x%08X bus=%u zone=%u pos=(%.2f,%.2f,%.2f) spread=%.2f E=%.2f sharp=%.2f f=%.0fHz d=%.0fms\n",
+           tag, (unsigned)pkt->payload.synth.effect_hash, pkt->bus_id, pkt->zone_hint,
            pkt->entry_pos[0], pkt->entry_pos[1], pkt->entry_pos[2],
            pkt->spread_radius, pkt->payload.synth.energy,
            pkt->payload.synth.attack_sharpness, pkt->payload.synth.base_freq_hz,
@@ -233,15 +233,46 @@ static void lh_log_debug(const char *tag, const LH_EventPacket *pkt) {
 }
 
 static void lh_emit_one(const char *tag, const LH_EventPacket *pkt) {
-    lh_log_debug(tag, pkt);
-    (void)lh_udp_send(pkt);
+    if (!pkt) return;
+    LH_EventPacket stamped = *pkt;
+    if (stamped.payload_type == (uint8_t)LH_PAYLOAD_PARAMETRIC &&
+        stamped.payload.synth.effect_hash == 0u &&
+        tag && tag[0]) {
+        stamped.payload.synth.effect_hash = lh_fnv1a_hash(tag);
+    }
+    lh_log_debug(tag, &stamped);
+    (void)lh_udp_send(&stamped);
 }
 
 static void lh_emit_batch(const char *tag, const LH_EventPacket *pkts, size_t count) {
-    if (count > 0) {
+    if (!pkts || count == 0) return;
+    uint32_t tag_hash = (tag && tag[0]) ? lh_fnv1a_hash(tag) : 0u;
+    if (tag_hash == 0u) {
         lh_log_debug(tag, &pkts[0]);
+        (void)lh_udp_send_batch(pkts, count);
+        return;
     }
-    (void)lh_udp_send_batch(pkts, count);
+
+    size_t offset = 0;
+    while (offset < count) {
+        size_t chunk = count - offset;
+        if (chunk > LH_UDP_MAX_BATCH_PACKETS) {
+            chunk = LH_UDP_MAX_BATCH_PACKETS;
+        }
+        LH_EventPacket stamped[LH_UDP_MAX_BATCH_PACKETS];
+        for (size_t i = 0; i < chunk; ++i) {
+            stamped[i] = pkts[offset + i];
+            if (stamped[i].payload_type == (uint8_t)LH_PAYLOAD_PARAMETRIC &&
+                stamped[i].payload.synth.effect_hash == 0u) {
+                stamped[i].payload.synth.effect_hash = tag_hash;
+            }
+        }
+        if (offset == 0) {
+            lh_log_debug(tag, &stamped[0]);
+        }
+        (void)lh_udp_send_batch(stamped, chunk);
+        offset += chunk;
+    }
 }
 
 /* ============================================================================
@@ -1121,16 +1152,16 @@ bool LH_L1VR_ProcessSound(
             return true;
         }
 
-        /* Flashlight toggle click on off-hand arm - local player only */
+        /* Flashlight toggle tactile click on upper chest / shoulder (off-hand side) - local player only */
         if (is_local_player && strncasecmp(it, "flashlight", 10) == 0) {
             bool off_right = is_left_handed;
             LH_EventPacket pkt = lh_make_packet(
                 (uint8_t)LH_BUS_UI_FEEDBACK,
-                off_right ? (uint8_t)LH_ZONE_ARM_RIGHT : (uint8_t)LH_ZONE_ARM_LEFT,
-                (uint16_t)LH_FLAG_SUPPRESS_EMS,
-                off_right ? LH_TCS_ARM_X : -LH_TCS_ARM_X, LH_TCS_ARM_Y, LH_TCS_ARM_Z,
-                0.15f,
-                0.28f, 0.72f, 200.0f, -40.0f, 20.0f, (uint8_t)LH_WAVE_IMPULSE
+                (uint8_t)LH_ZONE_TORSO,
+                (uint16_t)(LH_FLAG_ACTIVE_BRAKING | LH_FLAG_SUPPRESS_EMS),
+                off_right ? 0.55f : -0.55f, 0.55f, 0.92f,
+                0.25f,
+                0.48f, 0.80f, 165.0f, -35.0f, 65.0f, (uint8_t)LH_WAVE_IMPULSE
             );
             lh_emit_one("Flashlight", &pkt);
             return true;

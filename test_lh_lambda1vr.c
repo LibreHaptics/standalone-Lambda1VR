@@ -128,6 +128,7 @@ static void test_abi_layout(void) {
     EXPECT_TRUE(offsetof(LH_EventPacket, payload.synth.freq_glide_hz) == 0x30, "offset 0x30");
     EXPECT_TRUE(offsetof(LH_EventPacket, payload.synth.decay_ms) == 0x34, "offset 0x34");
     EXPECT_TRUE(offsetof(LH_EventPacket, payload.synth.wave_shape) == 0x38, "offset 0x38");
+    EXPECT_TRUE(offsetof(LH_EventPacket, payload.synth.effect_hash) == 0x3C, "offset 0x3C (effect_hash == 60)");
     EXPECT_TRUE(LH_FLAG_PREFER_EMS == 0x0010, "LH_FLAG_PREFER_EMS == 0x0010");
     EXPECT_TRUE(LH_FLAG_SUPPRESS_EMS == 0x0020, "LH_FLAG_SUPPRESS_EMS == 0x0020");
     g_tests_passed++;
@@ -503,6 +504,48 @@ static void test_item_pickup_bounded_buffer(void) {
     g_tests_passed++;
 }
 
+static void test_effect_hash_and_flashlight(void) {
+    /* 1. FNV-1a parity vectors matching C# LhfxAssetRegistry.ComputeFnv1aHash() */
+    EXPECT_TRUE(lh_fnv1a_hash(NULL) == 0u, "NULL hashes to 0");
+    EXPECT_TRUE(lh_fnv1a_hash("") == 0u, "Empty string hashes to 0");
+    EXPECT_TRUE(lh_fnv1a_hash("Flashlight") == 0xE7060113u, "Flashlight FNV-1a parity vector");
+    EXPECT_TRUE(lh_fnv1a_hash("flashlight") == 0xE7060113u, "Flashlight case-insensitive hash");
+    EXPECT_TRUE(lh_fnv1a_hash("Shotgun2x") == 0x850757E7u, "Shotgun2x FNV-1a parity vector");
+
+    /* 2. Local Flashlight toggle emits perceptible ERM torso click stamped with Flashlight hash */
+    LH_L1VR_ResetState();
+    drain_rx();
+    const float origin[3] = { 0.0f, 0.0f, 0.0f };
+    LH_EventPacket rx[8];
+
+    EXPECT_TRUE(LH_L1VR_ProcessSound("items/flashlight1.wav", origin, true, origin, 28.0f, 0.0f, false, false, true, 1.0f),
+                "Local flashlight toggle accepted");
+    size_t n = recv_packets(rx, 8);
+    EXPECT_TRUE(n == 1, "Flashlight emits 1 packet");
+    EXPECT_TRUE(rx[0].bus_id == LH_BUS_UI_FEEDBACK, "Flashlight on UIFeedback bus");
+    EXPECT_TRUE(rx[0].zone_hint == LH_ZONE_TORSO, "Flashlight targets upper torso/shoulder");
+    EXPECT_TRUE((rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Flashlight suppresses EMS");
+    EXPECT_TRUE((rx[0].flags & LH_FLAG_ACTIVE_BRAKING) != 0, "Flashlight enables active braking");
+    EXPECT_TRUE(rx[0].entry_pos[0] < -0.40f, "Right-handed off-hand flashlight on left shoulder/chest");
+    EXPECT_TRUE(rx[0].payload.synth.energy >= 0.45f, "Flashlight energy perceptible on ERM");
+    EXPECT_TRUE(rx[0].payload.synth.decay_ms >= 60.0f, "Flashlight decay perceptible on ERM");
+    EXPECT_TRUE(rx[0].payload.synth.effect_hash == lh_fnv1a_hash("Flashlight"),
+                "Flashlight packet stamped with FNV-1a effect_hash");
+
+    /* 3. Multi-packet batch (Shotgun2x with 2H stabilisation -> 3 packets) stamps identical hash on all packets */
+    drain_rx();
+    EXPECT_TRUE(LH_L1VR_ProcessWeaponEvent("events/shotgun2.sc", 0.0f, 0, 0, 0, false, true),
+                "Shotgun2x weapon event accepted");
+    n = recv_packets(rx, 8);
+    EXPECT_TRUE(n == 3, "Shotgun2x 2H emits 3-packet batch");
+    for (size_t i = 0; i < n; ++i) {
+        EXPECT_TRUE(rx[i].payload.synth.effect_hash == 0x850757E7u,
+                    "All Shotgun2x batch packets carry shared Shotgun2x effect_hash");
+    }
+
+    g_tests_passed++;
+}
+
 int main(void) {
     printf("=== Lambda1VR LibreHaptics Native C99 & UDP Loopback Test Suite ===\n");
     setup_loopback_rx();
@@ -516,6 +559,7 @@ int main(void) {
     test_all_lh_test_commands();
     test_multiplayer_sound_and_charger_distance_filters();
     test_item_pickup_bounded_buffer();
+    test_effect_hash_and_flashlight();
 
     LH_L1VR_Shutdown();
     if (g_rx_fd >= 0) close(g_rx_fd);

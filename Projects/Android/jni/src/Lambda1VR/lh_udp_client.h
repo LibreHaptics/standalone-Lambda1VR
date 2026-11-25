@@ -92,8 +92,9 @@ typedef struct {
             float   base_freq_hz;     // [0x2C] Base frequency [5.0 .. 500.0 Hz]
             float   freq_glide_hz;    // [0x30] Frequency chirp delta (Hz)
             float   decay_ms;         // [0x34] Decay duration (ms)
-            uint8_t wave_shape;       // [0x38] LH_WaveShape
-            uint8_t reserved[7];      // [0x39]
+            uint8_t  wave_shape;      // [0x38] LH_WaveShape
+            uint8_t  reserved[3];     // [0x39] Reserved padding
+            uint32_t effect_hash;     // [0x3C] Optional FNV-1a (32-bit, lowercase ASCII) ID for .lhfx override
         } synth;
 
         struct {
@@ -118,11 +119,33 @@ typedef struct {
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(LH_EventPacket) == LH_PACKET_SIZE_BYTES, "LH_EventPacket must be exactly 64 bytes");
+_Static_assert(offsetof(LH_EventPacket, payload.synth.effect_hash) == 60, "effect_hash must reside at byte offset 60 (0x3C)");
 #elif defined(__cplusplus) && __cplusplus >= 201103L
 static_assert(sizeof(LH_EventPacket) == LH_PACKET_SIZE_BYTES, "LH_EventPacket must be exactly 64 bytes");
+static_assert(offsetof(LH_EventPacket, payload.synth.effect_hash) == 60, "effect_hash must reside at byte offset 60 (0x3C)");
 #else
 typedef char lh_event_packet_size_check[(sizeof(LH_EventPacket) == LH_PACKET_SIZE_BYTES) ? 1 : -1];
+typedef char lh_event_packet_effect_hash_offset_check[(offsetof(LH_EventPacket, payload.synth.effect_hash) == 60) ? 1 : -1];
 #endif
+
+/**
+ * Computes a deterministic 32-bit FNV-1a hash (ASCII lowercase) matching
+ * LibreHaptics.Loom.Lite.LhfxAssetRegistry.ComputeFnv1aHash().
+ * Returns 0 for NULL or empty strings (disabling .lhfx hash lookup).
+ */
+static inline uint32_t lh_fnv1a_hash(const char *name) {
+    if (!name || !name[0]) return 0u;
+    uint32_t hash = 2166136261u;
+    for (const unsigned char *p = (const unsigned char *)name; *p; ++p) {
+        unsigned char c = *p;
+        if (c >= 'A' && c <= 'Z') {
+            c = (unsigned char)(c + ('a' - 'A'));
+        }
+        hash ^= (uint32_t)c;
+        hash *= 16777619u;
+    }
+    return hash;
+}
 
 typedef struct {
     char     host[64];

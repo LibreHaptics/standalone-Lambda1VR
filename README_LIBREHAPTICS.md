@@ -48,6 +48,19 @@ Because the hooks operate at the **`libxash.so`** engine level, haptics work aut
 
 ---
 
+## Custom `.lhfx` Overrides & Muting
+
+Every outgoing parametric `LH_EventPacket` from Lambda1VR automatically stamps a deterministic 32-bit FNV-1a (lowercase ASCII) **`effect_hash`** at byte offset `0x3C`.
+
+- **Zero setup required:** If no matching `.lhfx` asset is installed in **LibreHaptics Player Lite**, the engine plays the built-in procedural haptics as a fallback.
+- **Customize any effect:** Create an `.lhfx` asset in **LibreHaptics Creator** whose `metadata.id` matches an effect tag (case-insensitive) — e.g. `Flashlight`, `Shotgun2x`, `Glock`, `Python357`, `MP5`, `RPG`, `CrowbarSwing`, `MeleeHitFlesh`, `MeleeHitMetal`, `HevCharger`, `HealthCharger`, `HevSuitEquip`, `GeigerClick`, `HeartbeatLub`, `HeartbeatDub`, `Explosion3D`, `Damage`, `XenLongJump` — and add it to your game pack or user overrides.
+  - Leave `spatial.default_position` as `null` (with `mode: "tcs_point"`) to inherit live 3D hit coordinates from the game.
+  - Multi-packet batches sharing the same `effect_hash` (such as `Shotgun2x` or `HevSuitEquip`) are automatically deduplicated in `UdpEventReceiver` so the `.lhfx` override triggers once.
+- **Mute an unwanted effect:** Provide a matching `.lhfx` asset with all layers disabled (`"enabled": false`) or muted (`"is_muted": true`).
+- **Discovering exact tags:** Enable `lh_debug 1` in the console to log every outgoing effect tag and its `hash=0x...` to `logcat`.
+
+---
+
 ## Building & Tests
 
 ```bash
