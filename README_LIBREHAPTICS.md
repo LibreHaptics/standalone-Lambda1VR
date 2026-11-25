@@ -1,53 +1,59 @@
-# Lambda1VR + LibreHaptics (Half-Life 1 VR dla Meta Quest)
+# Lambda1VR + LibreHaptics (Half-Life 1 VR for Meta Quest)
 
-Natywna integracja **LibreHaptics (Loom.Lite)** dla portu [Team-Beef-Studios/Lambda1VR](https://github.com/Team-Beef-Studios/Lambda1VR) (Xash3D-FWGS + OpenXR, `arm64-v8a`), działająca bezpośrednio z **LibreHaptics Player Lite** (`org.librehaptics.player.quest`) przez lokalne UDP (`127.0.0.1:19800`) oraz mechanizm ochrony procesu `:loom_service` (`BIND_AUTO_CREATE | BIND_IMPORTANT`).
+Native **LibreHaptics (Loom.Lite)** integration for [Team-Beef-Studios/Lambda1VR](https://github.com/Team-Beef-Studios/Lambda1VR) (Xash3D-FWGS + OpenXR, `arm64-v8a`), communicating directly with **LibreHaptics Player Lite** (`org.librehaptics.player.quest`) over local UDP (`127.0.0.1:19800`) with `:loom_service` OOM protection (`BIND_AUTO_CREATE | BIND_IMPORTANT`).
 
-Mod działa na poziomie silnika **`libxash.so`**, dzięki czemu obsługuje automatycznie w trybie Singleplayer i Multiplayer:
+Because the hooks operate at the **`libxash.so`** engine level, haptics work automatically in Singleplayer and Multiplayer across:
 - **Half-Life 1** (`valve`)
 - **Half-Life: Blue Shift** (`bshift`)
 - **Half-Life: Opposing Force** (`gearbox`)
-- **Afraid of Monsters** (`aomdc`) oraz **They Hunger** (`hunger`)
+- **Afraid of Monsters** (`aomdc`) and **They Hunger** (`hunger`)
 
 ---
 
-## Instalacja na Meta Quest
+## Installation on Meta Quest
 
-Instaluje się dokładnie jak standardowa Lambda1VR (`com.drbeef.lambda1vr`):
-1. Jeśli masz zainstalowaną oryginalną wersję Lambda1VR z SideQuest, odinstaluj ją najpierw (zapisy gry i pliki w `/sdcard/xash/` pozostają nienaruszone).
-2. Zainstaluj zbudowany plik APK przez SideQuest lub ADB:
+### Option A — 1-Click via LibreHaptics Player Lite (Recommended)
+1. Open **LibreHaptics Player Lite** on your Meta Quest and refresh the game catalog (`↻ GitHub`).
+2. Select **Lambda1VR (Half-Life VR)** and tap **Install**.
+   *(If you already have stock Lambda1VR from SideQuest installed, uninstall it first due to a different signing key — your game assets and saves in `/sdcard/xash/` are preserved).*
+
+### Option B — Manual Sideload (SideQuest / ADB)
+1. Uninstall stock Lambda1VR if installed from SideQuest (saves and assets in `/sdcard/xash/` remain untouched).
+2. Download the release APK from **GitHub Releases** (or build it locally) and install via SideQuest or ADB:
    ```bash
    ./install_to_quest.sh
    ```
-   *(Opcjonalnie, jeśli jeszcze nie masz skopiowanych plików gry z oryginalnego Half-Life, możesz dodać flagę `--sync-assets`, aby przesłać `valve` + `valve_hd` z `~/.local/share/Steam/steamapps/common/Half-Life` lub ścieżki podanej w `$HL1_STEAM_DIR` do `/sdcard/xash/valve`.)*
-3. **Uruchamianie na goglach:**
-   - Uruchom **LibreHaptics Player Lite** i połącz kamizelkę (TrueGear / bHaptics / OWO).
-   - Uruchom **Lambda1VR** — aplikacja automatycznie podepnie `:loom_service` (ochrona przed OOM) i zacznie wysyłać 64-bajtowe pakiety `LH_EventPacket` na `127.0.0.1:19800`.
+   *(Optional: pass `--sync-assets` to push `valve` + `valve_hd` from `~/.local/share/Steam/steamapps/common/Half-Life` or `$HL1_STEAM_DIR` to `/sdcard/xash/valve`.)*
+
+### Running on Headset
+1. Launch **LibreHaptics Player Lite** and connect your haptic vest (TrueGear / bHaptics / OWO).
+2. Launch **Lambda1VR** — it automatically binds `:loom_service` (OOM protection) and streams 64-byte `LH_EventPacket` frames to `127.0.0.1:19800`.
 
 ---
 
-## Komendy i zmienne konsoli Xash3D (`config.cfg`)
+## Xash3D Console Variables & Commands (`config.cfg`)
 
-| Zmienna / Komenda | Domyślna wartość | Opis |
+| Cvar / Command | Default | Description |
 |---|---|---|
-| `lh_enable` | `"1"` | Włącza / wyłącza wysyłanie telemetrii LibreHaptics |
-| `lh_host` | `"127.0.0.1"` | Adres IP odbiornika `UdpEventReceiver` |
-| `lh_port` | `"19800"` | Port UDP odbiornika `UdpEventReceiver` |
-| `lh_intensity` | `"1.0"` | Globalny mnożnik siły (`0.0 .. 2.0`) |
-| `lh_heartbeat` | `"1"` | Dynamiczne bicie serca (*lub-dub*) przy HP ≤ 30 |
-| `lh_geiger` | `"1"` | Kliknięcia licznika Geigera przy promieniowaniu |
-| `lh_footsteps` | `"0"` | Opcjonalne lekkie kroki na strefie stóp (domyślnie wyłączone) |
-| `lh_debug` | `"0"` | Logowanie wysyłanych pakietów w konsoli / `logcat` |
-| `lh_status` | *(komenda)* | Wyświetla status gniazda, licznik pakietów TX, tryb ręki, HP/HEV |
-| `lh_test <efekt>` | *(komenda)* | Wysyła testowy impuls: `front`, `back`, `left`, `right`, `headshot`, `shock`, `explosion`, `crowbar`, `glock`, `mp5`, `shotgun`, `doublebarrel`, `magnum`, `gauss`, `egon`, `rpg`, `hev`, `geiger`, `heartbeat`, `longjump`, `death` |
+| `lh_enable` | `"1"` | Enables / disables LibreHaptics UDP telemetry |
+| `lh_host` | `"127.0.0.1"` | `UdpEventReceiver` target IP address |
+| `lh_port` | `"19800"` | `UdpEventReceiver` target UDP port |
+| `lh_intensity` | `"1.0"` | Global intensity multiplier (`0.0 .. 2.0`) |
+| `lh_heartbeat` | `"1"` | Dynamic low-HP heartbeat (*lub-dub*) when HP ≤ 30 |
+| `lh_geiger` | `"1"` | Radiation Geiger counter clicks |
+| `lh_footsteps` | `"0"` | Optional subtle footsteps on the feet zone (off by default) |
+| `lh_debug` | `"0"` | Log outgoing packets to console / `logcat` |
+| `lh_status` | *(command)* | Prints socket state, TX packet count, handedness, HP/HEV |
+| `lh_test <effect>` | *(command)* | Triggers a test pulse: `front`, `back`, `left`, `right`, `headshot`, `shock`, `explosion`, `crowbar`, `glock`, `mp5`, `shotgun`, `doublebarrel`, `magnum`, `gauss`, `egon`, `rpg`, `hev`, `geiger`, `heartbeat`, `longjump`, `death` |
 
 ---
 
-## Kompilacja i testy
+## Building & Tests
 
 ```bash
-./build_lambda1vr_lh.sh          # buduje testy C99 + lambda1vr-release.apk
-./build_lambda1vr_lh.sh Debug    # buduje wariant Debug
+./build_lambda1vr_lh.sh          # runs C99 unit tests + builds lambda1vr-release.apk
+./build_lambda1vr_lh.sh Debug    # builds Debug variant
 ```
 
-Gotowy plik APK:
+Output APK:
 `Projects/Android/build/outputs/apk/release/lambda1vr-release.apk`
