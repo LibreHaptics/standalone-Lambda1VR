@@ -128,7 +128,7 @@ android {
         targetCompatibility = '1.8'
     }
     compileSdkVersion = 32
-    buildToolsVersion = '29.0.3'
+    buildToolsVersion = '34.0.0'
 
     ndkVersion '25.1.8937393'
 }

@@ -17,6 +17,7 @@ Authors		:	Simon Brown
 
 #include "VrInput.h"
 #include "VrCvars.h"
+#include "VrLibreHaptics.h"
 
 extern cvar_t	*cl_forwardspeed;
 extern cvar_t	*cl_movespeedkey;
@@ -49,6 +50,7 @@ void HandleInput_Alt2( ovrInputStateTrackedRemote *pDominantTrackedRemoteNew, ov
 			TBXR_Vibrate(40, channel,
 							0.5); // vibrate to let user know they can switch
 		}
+		LH_L1VR_OnBackpackHover(true);
 		canUseQuickSave = true;
 	}
 
@@ -272,6 +274,7 @@ void HandleInput_Alt2( ovrInputStateTrackedRemote *pDominantTrackedRemoteNew, ov
 					TBXR_Vibrate(40, channel,
 									0.5); // vibrate to let user know they can switch
 				}
+				LH_L1VR_OnBackpackHover(false);
 				canUseBackpack = true;
 			}
 
@@ -300,12 +303,14 @@ void HandleInput_Alt2( ovrInputStateTrackedRemote *pDominantTrackedRemoteNew, ov
 							sendButtonActionSimple(g_pszBackpackWeapon);
 							int channel = (vr_control_scheme->integer >= 10) ? 0 : 1;
 							TBXR_Vibrate(80, channel, 0.8); // vibrate to let user know they switched
+							LH_L1VR_OnBackpackAction(true);
 							grabMeleeWeapon = 1;
 						}
 					}
 				} else if (grabMeleeWeapon == 1 && !dominantGripPushed) {
 					//Restores last used weapon
 					sendButtonActionSimple("lastinv");
+					LH_L1VR_OnBackpackAction(false);
 					grabMeleeWeapon = 0;
 				}
 			}

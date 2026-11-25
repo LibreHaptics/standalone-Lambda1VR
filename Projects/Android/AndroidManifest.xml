@@ -19,6 +19,11 @@
 	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
 		tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
 
+	<!-- Android 11+ package visibility for LibreHaptics Player Lite (:loom_service OOM binding) -->
+	<queries>
+		<package android:name="org.librehaptics.player.quest" />
+	</queries>
+
 
 	<application android:allowBackup="false"
 		android:icon="@drawable/ic_lambda1vr"

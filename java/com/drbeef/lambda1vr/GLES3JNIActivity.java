@@ -16,7 +16,10 @@ import java.util.Locale;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -25,6 +28,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -70,6 +74,54 @@ import static android.system.Os.setenv;
 	private SurfaceView mView;
 	private SurfaceHolder mSurfaceHolder;
 	private long mNativeHandle;
+
+	// LibreHaptics Player Lite (:loom_service) OOM protection binding
+	private static final String LH_PLAYER_PACKAGE = "org.librehaptics.player.quest";
+	private static final String LH_LOOM_SERVICE   = "org.librehaptics.player.quest.LoomForegroundService";
+	private static final String LH_BIND_ACTION    = "org.librehaptics.player.quest.BIND_LOOM_SERVICE";
+	private boolean mLoomServiceBound = false;
+	private final ServiceConnection mLoomServiceConnection = new ServiceConnection() {
+		@Override public void onServiceConnected( ComponentName name, IBinder service ) {
+			Log.i( TAG, "LibreHaptics :loom_service bound (OOM protection active)" );
+		}
+		@Override public void onServiceDisconnected( ComponentName name ) {
+			Log.i( TAG, "LibreHaptics :loom_service disconnected" );
+		}
+	};
+
+	private void bindLibreHapticsService() {
+		if ( mLoomServiceBound ) {
+			return;
+		}
+		try {
+			Intent intent = new Intent( LH_BIND_ACTION );
+			intent.setComponent( new ComponentName( LH_PLAYER_PACKAGE, LH_LOOM_SERVICE ) );
+			mLoomServiceBound = bindService(
+					intent,
+					mLoomServiceConnection,
+					Context.BIND_AUTO_CREATE | Context.BIND_IMPORTANT
+			);
+			if ( mLoomServiceBound ) {
+				Log.i( TAG, "Requested binding to LibreHaptics Player Lite (:loom_service)" );
+			}
+		} catch ( Throwable t ) {
+			// LibreHaptics Player Lite not installed or unavailable - continue gameplay normally
+			mLoomServiceBound = false;
+		}
+	}
+
+	private void unbindLibreHapticsService() {
+		if ( !mLoomServiceBound ) {
+			return;
+		}
+		try {
+			unbindService( mLoomServiceConnection );
+		} catch ( Throwable t ) {
+			// Ignore unbind race on shutdown
+		} finally {
+			mLoomServiceBound = false;
+		}
+	}
 
 	public void shutdown() {
 		System.exit(0);
@@ -555,6 +607,7 @@ import static android.system.Os.setenv;
 		Log.v( TAG, "GLES3JNIActivity::onStart()" );
 		super.onStart();
 
+		bindLibreHapticsService();
 		GLES3JNILib.onStart( mNativeHandle, this );
 	}
 
@@ -576,6 +629,7 @@ import static android.system.Os.setenv;
 	@Override protected void onStop()
 	{
 		Log.v( TAG, "GLES3JNIActivity::onStop()" );
+		unbindLibreHapticsService();
 		GLES3JNILib.onStop( mNativeHandle );
 		super.onStop();
 	}

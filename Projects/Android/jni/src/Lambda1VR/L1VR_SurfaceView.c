@@ -13,6 +13,7 @@
 #include "VrInput.h"
 #include "VrCvars.h"
 #include "VrCommon.h"
+#include "VrLibreHaptics.h"
 
 #include <common/common.h>
 #include <common/library.h>
@@ -344,6 +345,8 @@ void VR_FrameSetup()
 	char buffer[32];
 	sprintf(buffer, "%d", vrFOV);
 	vr_hmd_fov_x = Cvar_Set2("vr_hmd_fov_x", buffer, true);
+
+	LH_L1VR_OnFrame();
 }
 
 static inline bool isHostAlive()
@@ -464,6 +467,8 @@ void VR_Init()
 	{
 		g_pszBackpackWeapon = "weapon_crowbar";
 	}
+
+	LH_L1VR_Init();
 }
 
 
@@ -687,6 +692,8 @@ void * AppThreadFunction( void * parm )
 	}
 
 	{
+	    LH_L1VR_Shutdown();
+
 	    //Make sure we actually shutdown
 	    Host_Shutdown( );
 

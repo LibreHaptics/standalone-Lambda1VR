@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 3,
+  "id": "standalone-Lambda1VR",
+  "name": "Lambda1VR (Half-Life VR)",
+  "version": "1.7.4",
+  "author": "LibreHaptics / Team Beef",
+  "description": "Zmodyfikowany silnik Xash3D VR z natywną telemetrią LibreHaptics (kopnięcie broni, kierunkowe obrażenia, eksplozje, HEV i bicie serca).",
+  "protocols": ["LH Native"],
+  "categories": ["standalone"],
+  "targets": {
+    "standalone": {
+      "androidPackageName": "com.drbeef.lambda1vr",
+      "launchAfterInstall": true,
+      "detection": {
+        "matchMode": "all",
+        "versionSource": "auto",
+        "rules": [
+          {
+            "type": "apk",
+            "packageName": "com.drbeef.lambda1vr"
+          }
+        ]
+      },
+      "install": {
+        "steps": [
+          {
+            "kind": "apk",
+            "fileName": "Lambda1VR-1.7.4-arm64.apk",
+            "assetPattern": "Lambda1VR-*-arm64.apk",
+            "downloadUrl": "",
+            "sha256": "",
+            "requiresUninstallOnSignatureMismatch": true
+          }
+        ]
+      },
+      "uninstall": {
+        "uninstallApk": true,
+        "removeLocalPack": true,
+        "deleteTrackedFiles": true,
+        "preservePaths": ["/sdcard/xash"]
+      }
+    }
+  }
+}

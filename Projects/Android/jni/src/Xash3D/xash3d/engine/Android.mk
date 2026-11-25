@@ -33,6 +33,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../			    \
 	$(LOCAL_PATH)/../utils/vgui/include	    \
 	$(HLSDK_PATH)/cl_dll/ \
+    ${TOP_DIR}/Lambda1VR \
     ${TOP_DIR}/OpenXR-SDK/include \
     ${TOP_DIR}/OpenXR-SDK/src/common
 
@@ -47,6 +48,7 @@ LAMBDA1VR_SRC_FILES := \
 		   $(LOCAL_PATH)/../../../Lambda1VR/VrInputAlt.c \
 		   $(LOCAL_PATH)/../../../Lambda1VR/VrInputAlt2.c \
 		   $(LOCAL_PATH)/../../../Lambda1VR/VrInputOne.c \
+		   $(LOCAL_PATH)/../../../Lambda1VR/VrLibreHaptics.c \
 		   $(LOCAL_PATH)/../../../Lambda1VR/argtable3.c
 
 LOCAL_SRC_FILES := \

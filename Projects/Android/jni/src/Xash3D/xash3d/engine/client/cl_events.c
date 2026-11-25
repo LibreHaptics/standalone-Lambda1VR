@@ -19,6 +19,9 @@ GNU General Public License for more details.
 #include "client.h"
 #include "event_flags.h"
 #include "net_encode.h"
+#ifdef VR
+#include "VrLibreHaptics.h"
+#endif
 
 /*
 ===============
@@ -166,6 +169,9 @@ qboolean CL_FireEvent( event_info_t *ei )
 		{
 			if( ev->func )
 			{
+#ifdef VR
+				LH_L1VR_OnClientEvent( cl.event_precache[bound( 1, ei->index, MAX_EVENTS - 1 )], &ei->args );
+#endif
 				ev->func( &ei->args );
 				return true;
 			}

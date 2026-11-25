@@ -21,6 +21,9 @@ GNU General Public License for more details.
 #include "con_nprint.h"
 #include "ref_params.h"
 #include "pm_local.h"
+#ifdef VR
+#include "VrLibreHaptics.h"
+#endif
 
 #define SND_CLIP_DISTANCE		(float)(GI->soundclip_dist)
 
@@ -891,6 +894,10 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	{
 		pos = cl.refdef.vieworg;
 	}
+
+#ifdef VR
+	LH_L1VR_OnSound( sfx->name, pos, ent, fvol );
+#endif
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );

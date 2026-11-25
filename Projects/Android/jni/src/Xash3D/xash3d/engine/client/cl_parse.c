@@ -22,6 +22,9 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "cl_tent.h"
 #include "shake.h"
+#ifdef VR
+#include "VrLibreHaptics.h"
+#endif
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -1455,6 +1458,10 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );
+
+#ifdef VR
+	LH_L1VR_OnUserMessage( clgame.msg[i].name, iSize, pbuf );
+#endif
 
 	if( cl_trace_messages->integer )
 	{

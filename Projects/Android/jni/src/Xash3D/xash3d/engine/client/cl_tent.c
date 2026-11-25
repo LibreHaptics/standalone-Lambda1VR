@@ -26,6 +26,9 @@ GNU General Public License for more details.
 #include "studio.h"
 #include "wadfile.h"	// acess decal size
 #include "sound.h"
+#ifdef VR
+#include "VrLibreHaptics.h"
+#endif
 
 /*
 ==============================================================
@@ -1865,12 +1868,18 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		frameRate = BF_ReadByte( &buf );
 		flags = BF_ReadByte( &buf );
 		CL_Explosion( pos, modelIndex, scale, frameRate, flags );
+#ifdef VR
+		LH_L1VR_OnExplosion( pos, scale );
+#endif
 		break;
 	case TE_TAREXPLOSION:
 		pos[0] = BF_ReadCoord( &buf );
 		pos[1] = BF_ReadCoord( &buf );
 		pos[2] = BF_ReadCoord( &buf );
 		CL_BlobExplosion( pos );
+#ifdef VR
+		LH_L1VR_OnExplosion( pos, 2.5f );
+#endif
 		break;
 	case TE_SMOKE:
 		pos[0] = BF_ReadCoord( &buf );
@@ -1908,6 +1917,9 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[1] = BF_ReadCoord( &buf );
 		pos[2] = BF_ReadCoord( &buf );
 		CL_TeleportSplash( pos );
+#ifdef VR
+		LH_L1VR_OnTeleport( pos );
+#endif
 		break;
 	case TE_EXPLOSION2:
 		pos[0] = BF_ReadCoord( &buf );
@@ -1916,6 +1928,9 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		color = BF_ReadByte( &buf );
 		count = BF_ReadByte( &buf );
 		CL_ParticleExplosion2( pos, color, count );
+#ifdef VR
+		LH_L1VR_OnExplosion( pos, 2.5f );
+#endif
 		break;
 	case TE_BSPDECAL:
 		pos[0] = BF_ReadCoord( &buf );
