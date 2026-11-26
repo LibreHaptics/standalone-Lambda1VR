@@ -4,7 +4,7 @@
   "name": "Lambda1VR (Half-Life VR)",
   "version": "1.7.4.1",
   "author": "LibreHaptics / Team Beef",
-  "description": "Zmodyfikowany silnik Xash3D VR z natywną telemetrią LibreHaptics (kopnięcie broni, kierunkowe obrażenia, eksplozje, HEV i bicie serca).",
+  "description": "Modified Xash3D VR engine with native LibreHaptics support (weapon recoil, directional damage, explosions, HEV suit, heartbeat, and .lhfx overrides).",
   "protocols": ["LH Native"],
   "categories": ["standalone"],
   "targets": {
