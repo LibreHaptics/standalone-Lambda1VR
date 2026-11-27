@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "id": "standalone-Lambda1VR",
   "name": "Lambda1VR (Half-Life VR)",
-  "version": "1.7.4.1",
+  "version": "1.7.4.2",
   "author": "LibreHaptics / Team Beef",
   "description": "Modified Xash3D VR engine with native LibreHaptics support (weapon recoil, directional damage, explosions, HEV suit, heartbeat, and .lhfx overrides).",
   "protocols": ["LH Native"],
@@ -25,7 +25,7 @@
         "steps": [
           {
             "kind": "apk",
-            "fileName": "Lambda1VR-1.7.4.1-arm64.apk",
+            "fileName": "Lambda1VR-1.7.4.2-arm64.apk",
             "assetPattern": "Lambda1VR-*-arm64.apk",
             "downloadUrl": "",
             "sha256": "",

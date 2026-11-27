@@ -410,21 +410,27 @@ static void lh_emit_weapon_recoil(
 
     /* 2. Shoulder / upper chest stock kick (vibro vest feedback, suppresses EMS duplication) */
     float eff_shoulder = shoulder_ratio;
-    if (is_stabilised && eff_shoulder < 0.45f) {
-        eff_shoulder = 0.45f;
+    if (is_stabilised && shoulder_ratio > 0.05f) {
+        eff_shoulder = lh_clampf(eff_shoulder + 0.14f, 0.60f, 1.15f);
     }
     if (eff_shoulder > 0.05f) {
+        float torso_decay_ms = decay_ms * 1.35f;
+        if (torso_decay_ms < 58.0f) {
+            torso_decay_ms = 58.0f;
+        }
+        /* Heavy double-barrel / grenade launcher blasts wrap subtly to upper back via wide spread */
+        float torso_spread = (eff_shoulder >= 0.98f) ? 1.05f : 0.36f;
         batch[count++] = lh_make_packet(
             (uint8_t)LH_BUS_WEAPON_RECOIL,
             (uint8_t)LH_ZONE_TORSO,
             shoulder_flags,
             shoulder_x, LH_TCS_SHOULDER_Y, LH_TCS_SHOULDER_FRONT_Z,
-            0.28f,
+            torso_spread,
             energy * eff_shoulder,
             lh_clampf(sharpness * 0.85f, 0.30f, 0.90f),
             lh_clampf(freq_hz * 0.82f, 25.0f, 220.0f),
             glide_hz * 0.6f,
-            decay_ms * 1.15f,
+            torso_decay_ms,
             wave_shape
         );
     }
@@ -712,54 +718,54 @@ bool LH_L1VR_ProcessWeaponEvent(
     if (strcasecmp(ev, "glock1.sc") == 0 || strcasecmp(ev, "glock2.sc") == 0) {
         bool fast = (strcasecmp(ev, "glock2.sc") == 0);
         lh_emit_weapon_recoil("Glock", is_left_handed, is_stabilised,
-            fast ? 0.58f : 0.52f, 0.88f, 155.0f, -55.0f, 36.0f,
-            (uint8_t)LH_WAVE_SINE, 0.18f, 0.45f, true);
+            fast ? 0.64f : 0.58f, 0.88f, 155.0f, -55.0f, 42.0f,
+            (uint8_t)LH_WAVE_SINE, 0.58f, 0.45f, true);
         return true;
     }
 
     /* 2. .357 Magnum Python */
     if (strcasecmp(ev, "python.sc") == 0) {
         lh_emit_weapon_recoil("Python357", is_left_handed, is_stabilised,
-            0.96f, 0.96f, 84.0f, -40.0f, 68.0f,
-            (uint8_t)LH_WAVE_SINE, 0.52f, 0.65f, true);
+            1.02f, 0.96f, 84.0f, -40.0f, 75.0f,
+            (uint8_t)LH_WAVE_SINE, 0.85f, 0.68f, true);
         return true;
     }
 
     /* 3. MP5 SMG (primary) */
     if (strcasecmp(ev, "mp5.sc") == 0) {
         lh_emit_weapon_recoil("MP5", is_left_handed, is_stabilised,
-            0.54f, 0.86f, 135.0f, -45.0f, 32.0f,
-            (uint8_t)LH_WAVE_SINE, 0.35f, 0.55f, true);
+            0.62f, 0.86f, 135.0f, -45.0f, 40.0f,
+            (uint8_t)LH_WAVE_SINE, 0.72f, 0.55f, true);
         return true;
     }
 
     /* 4. MP5 M203 Underbarrel Grenade Launcher */
     if (strcasecmp(ev, "mp52.sc") == 0) {
         lh_emit_weapon_recoil("MP5_M203", is_left_handed, is_stabilised,
-            0.92f, 0.72f, 52.0f, -20.0f, 115.0f,
-            (uint8_t)LH_WAVE_SINE, 0.68f, 0.72f, true);
+            0.98f, 0.72f, 52.0f, -20.0f, 115.0f,
+            (uint8_t)LH_WAVE_SINE, 0.92f, 0.72f, true);
         return true;
     }
 
     /* 5. SPAS-12 Shotgun (single vs devastating double-barrel!) */
     if (strcasecmp(ev, "shotgun1.sc") == 0) {
         lh_emit_weapon_recoil("Shotgun1x", is_left_handed, is_stabilised,
-            0.88f, 0.92f, 68.0f, -30.0f, 75.0f,
-            (uint8_t)LH_WAVE_SINE, 0.62f, 0.68f, true);
+            0.96f, 0.92f, 68.0f, -30.0f, 82.0f,
+            (uint8_t)LH_WAVE_SINE, 0.90f, 0.70f, true);
         return true;
     }
     if (strcasecmp(ev, "shotgun2.sc") == 0) {
         lh_emit_weapon_recoil("Shotgun2x", is_left_handed, is_stabilised,
-            1.22f, 0.96f, 46.0f, -20.0f, 118.0f,
-            (uint8_t)LH_WAVE_SINE, 0.88f, 0.85f, true);
+            1.28f, 0.96f, 46.0f, -20.0f, 120.0f,
+            (uint8_t)LH_WAVE_SINE, 1.05f, 0.85f, true);
         return true;
     }
 
     /* 6. Crossbow (bolt / scoped sniper bolt) */
     if (strcasecmp(ev, "crossbow1.sc") == 0 || strcasecmp(ev, "crossbow2.sc") == 0) {
         lh_emit_weapon_recoil("Crossbow", is_left_handed, is_stabilised,
-            0.68f, 0.88f, 190.0f, -95.0f, 55.0f,
-            (uint8_t)LH_WAVE_TRIANGLE, 0.42f, 0.55f, true);
+            0.72f, 0.88f, 190.0f, -95.0f, 58.0f,
+            (uint8_t)LH_WAVE_TRIANGLE, 0.65f, 0.55f, true);
         return true;
     }
 
@@ -829,7 +835,7 @@ bool LH_L1VR_ProcessWeaponEvent(
             -60.0f,
             primary ? 65.0f : 135.0f,
             (uint8_t)LH_WAVE_SQUARE,
-            primary ? 0.45f : 0.90f,
+            primary ? 0.68f : 1.00f,
             0.75f,
             true
         );
@@ -842,8 +848,8 @@ bool LH_L1VR_ProcessWeaponEvent(
         g_lh.egon_start_ms = now;
         g_lh.last_egon_pulse_ms = now;
         lh_emit_weapon_recoil("EgonStart", is_left_handed, is_stabilised,
-            0.72f, 0.82f, 165.0f, 30.0f, 80.0f,
-            (uint8_t)LH_WAVE_SQUARE, 0.50f, 0.55f, true);
+            0.76f, 0.82f, 165.0f, 30.0f, 80.0f,
+            (uint8_t)LH_WAVE_SQUARE, 0.66f, 0.55f, true);
         return true;
     }
     if (strcasecmp(ev, "egon_stop.sc") == 0) {
@@ -884,26 +890,26 @@ bool LH_L1VR_ProcessWeaponEvent(
     /* 13. Opposing Force weapons (automatic out-of-the-box support) */
     if (strcasecmp(ev, "eagle.sc") == 0) {
         lh_emit_weapon_recoil("OpFor_DesertEagle", is_left_handed, is_stabilised,
-            0.90f, 0.94f, 95.0f, -45.0f, 60.0f,
-            (uint8_t)LH_WAVE_SINE, 0.45f, 0.60f, true);
+            0.94f, 0.94f, 95.0f, -45.0f, 65.0f,
+            (uint8_t)LH_WAVE_SINE, 0.78f, 0.60f, true);
         return true;
     }
     if (strcasecmp(ev, "m249.sc") == 0) {
         lh_emit_weapon_recoil("OpFor_M249", is_left_handed, is_stabilised,
-            0.78f, 0.90f, 92.0f, -35.0f, 45.0f,
-            (uint8_t)LH_WAVE_SINE, 0.65f, 0.72f, true);
+            0.82f, 0.90f, 92.0f, -35.0f, 48.0f,
+            (uint8_t)LH_WAVE_SINE, 0.82f, 0.72f, true);
         return true;
     }
     if (strcasecmp(ev, "sniper.sc") == 0) {
         lh_emit_weapon_recoil("OpFor_M40A1", is_left_handed, is_stabilised,
-            1.10f, 0.96f, 62.0f, -30.0f, 95.0f,
-            (uint8_t)LH_WAVE_SINE, 0.85f, 0.75f, true);
+            1.12f, 0.96f, 62.0f, -30.0f, 95.0f,
+            (uint8_t)LH_WAVE_SINE, 0.95f, 0.75f, true);
         return true;
     }
     if (strcasecmp(ev, "spore.sc") == 0) {
         lh_emit_weapon_recoil("OpFor_SporeLauncher", is_left_handed, is_stabilised,
-            0.76f, 0.60f, 64.0f, -20.0f, 95.0f,
-            (uint8_t)LH_WAVE_TRIANGLE, 0.50f, 0.55f, false);
+            0.78f, 0.60f, 64.0f, -20.0f, 95.0f,
+            (uint8_t)LH_WAVE_TRIANGLE, 0.68f, 0.55f, false);
         return true;
     }
     if (strcasecmp(ev, "shock.sc") == 0) {
@@ -1033,8 +1039,8 @@ bool LH_L1VR_ProcessSound(
              strncasecmp(w, "pwrench_hitbod", 14) == 0 ||
              strncasecmp(w, "knife_hit_flesh", 15) == 0)) {
             lh_emit_weapon_recoil("MeleeHitFlesh", is_left_handed, false,
-                0.88f, 0.92f, 95.0f, -35.0f, 75.0f,
-                (uint8_t)LH_WAVE_SINE, 0.45f, 0.0f, true);
+                0.90f, 0.92f, 95.0f, -35.0f, 75.0f,
+                (uint8_t)LH_WAVE_SINE, 0.62f, 0.0f, true);
             return true;
         }
 
@@ -1044,8 +1050,8 @@ bool LH_L1VR_ProcessSound(
              strncasecmp(w, "pwrench_hit", 11) == 0 ||
              strncasecmp(w, "knife_hit_wall", 14) == 0)) {
             lh_emit_weapon_recoil("MeleeHitMetal", is_left_handed, false,
-                0.76f, 0.95f, 215.0f, -70.0f, 60.0f,
-                (uint8_t)LH_WAVE_TRIANGLE, 0.35f, 0.0f, true);
+                0.78f, 0.95f, 215.0f, -70.0f, 60.0f,
+                (uint8_t)LH_WAVE_TRIANGLE, 0.52f, 0.0f, true);
             return true;
         }
 
@@ -1152,16 +1158,16 @@ bool LH_L1VR_ProcessSound(
             return true;
         }
 
-        /* Flashlight toggle tactile click on upper chest / shoulder (off-hand side) - local player only */
+        /* Flashlight toggle subtle tactile click on upper shoulder button (off-hand side) - local player only */
         if (is_local_player && strncasecmp(it, "flashlight", 10) == 0) {
             bool off_right = is_left_handed;
             LH_EventPacket pkt = lh_make_packet(
                 (uint8_t)LH_BUS_UI_FEEDBACK,
                 (uint8_t)LH_ZONE_TORSO,
                 (uint16_t)(LH_FLAG_ACTIVE_BRAKING | LH_FLAG_SUPPRESS_EMS),
-                off_right ? 0.55f : -0.55f, 0.55f, 0.92f,
-                0.25f,
-                0.48f, 0.80f, 165.0f, -35.0f, 65.0f, (uint8_t)LH_WAVE_IMPULSE
+                off_right ? 0.72f : -0.72f, 0.78f, 0.96f,
+                0.20f,
+                0.18f, 0.82f, 175.0f, -40.0f, 28.0f, (uint8_t)LH_WAVE_IMPULSE
             );
             lh_emit_one("Flashlight", &pkt);
             return true;
@@ -1354,18 +1360,18 @@ void LH_L1VR_ProcessFrameState(
         } else if (now_ms - g_lh.last_egon_pulse_ms >= 68ULL) {
             g_lh.last_egon_pulse_ms = now_ms;
             lh_emit_weapon_recoil("EgonSustain", is_left_handed, is_stabilised,
-                0.58f, 0.74f, 155.0f, 20.0f, 65.0f,
-                (uint8_t)LH_WAVE_SQUARE, 0.42f, 0.48f, true);
+                0.60f, 0.74f, 155.0f, 20.0f, 65.0f,
+                (uint8_t)LH_WAVE_SQUARE, 0.56f, 0.48f, true);
         }
     }
 
-    /* 3. Dynamic Low-HP Heartbeat (lub-dub on left chest, HP 1..30, 72..140 BPM) */
+    /* 3. Dynamic Low-HP Heartbeat (lub-dub on upper-left chest R0+R1, HP 1..30, 72..140 BPM) */
     if (heartbeat_enabled && health > 0 && health <= 30) {
         if (g_lh.next_heartbeat_dub_ms != 0 && now_ms >= g_lh.next_heartbeat_dub_ms) {
             /* Second beat ("dub") */
             LH_EventPacket dub = lh_make_packet(
                 (uint8_t)LH_BUS_PLAYER_VITALS, (uint8_t)LH_ZONE_TORSO, (uint16_t)LH_FLAG_SUPPRESS_EMS,
-                -0.28f, 0.35f, 0.95f, 0.24f,
+                -0.30f, 0.65f, 0.95f, 0.24f,
                 g_lh.pending_dub_energy, 0.26f, 44.0f, -8.0f, 110.0f, (uint8_t)LH_WAVE_SINE
             );
             lh_emit_one("HeartbeatDub", &dub);
@@ -1383,7 +1389,7 @@ void LH_L1VR_ProcessFrameState(
 
                 LH_EventPacket lub = lh_make_packet(
                     (uint8_t)LH_BUS_PLAYER_VITALS, (uint8_t)LH_ZONE_TORSO, (uint16_t)LH_FLAG_SUPPRESS_EMS,
-                    -0.28f, 0.35f, 0.95f, 0.26f,
+                    -0.30f, 0.65f, 0.95f, 0.26f,
                     lub_e, 0.30f, 54.0f, -10.0f, 130.0f, (uint8_t)LH_WAVE_SINE
                 );
                 lh_emit_one("HeartbeatLub", &lub);
@@ -1753,7 +1759,7 @@ bool LH_L1VR_TriggerTestEffect(const char *effect_name, bool is_left_handed, boo
     if (strcasecmp(effect_name, "heartbeat") == 0) {
         LH_EventPacket lub = lh_make_packet(
             (uint8_t)LH_BUS_PLAYER_VITALS, (uint8_t)LH_ZONE_TORSO, (uint16_t)LH_FLAG_SUPPRESS_EMS,
-            -0.28f, 0.35f, 0.95f, 0.26f,
+            -0.30f, 0.65f, 0.95f, 0.26f,
             0.65f, 0.30f, 54.0f, -10.0f, 130.0f, (uint8_t)LH_WAVE_SINE
         );
         lh_emit_one("TestHeartbeat", &lub);

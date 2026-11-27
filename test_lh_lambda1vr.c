@@ -278,6 +278,8 @@ static void test_weapons_and_handedness(void) {
     EXPECT_TRUE(rx[0].bus_id == LH_BUS_WEAPON_RECOIL, "WeaponRecoil bus");
     EXPECT_TRUE((rx[0].flags & LH_FLAG_PREFER_EMS) != 0, "Glock arm sets PREFER_EMS");
     EXPECT_TRUE((rx[1].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Glock shoulder vest sets SUPPRESS_EMS");
+    EXPECT_TRUE(rx[1].payload.synth.decay_ms >= 58.0f && rx[1].spread_radius >= 0.35f,
+                "Glock shoulder kick honors min 58ms decay and wider vest spread");
 
     /* 2. Left-handed MP5 with 2H stabilisation -> Left arm + Left shoulder + Right off-hand! */
     EXPECT_TRUE(LH_L1VR_ProcessWeaponEvent("events/mp5.sc", 0.0f, 0, 0, 0, true, true), "MP5 2H left");
@@ -287,10 +289,11 @@ static void test_weapons_and_handedness(void) {
     EXPECT_TRUE((rx[0].flags & LH_FLAG_PREFER_EMS) != 0, "MP5 dominant arm sets PREFER_EMS");
     EXPECT_TRUE(rx[1].zone_hint == LH_ZONE_TORSO && rx[1].entry_pos[0] < 0.0f, "Left shoulder");
     EXPECT_TRUE((rx[1].flags & LH_FLAG_SUPPRESS_EMS) != 0, "MP5 shoulder sets SUPPRESS_EMS");
+    EXPECT_TRUE(rx[1].payload.synth.decay_ms >= 58.0f, "MP5 shoulder honors min 58ms decay");
     EXPECT_TRUE(rx[2].zone_hint == LH_ZONE_ARM_RIGHT && rx[2].entry_pos[0] > 1.0f, "Right support arm");
     EXPECT_TRUE((rx[2].flags & LH_FLAG_PREFER_EMS) != 0, "MP5 support arm sets PREFER_EMS");
 
-    /* 3. Double-barrel SPAS-12 heavier than single-barrel */
+    /* 3. Double-barrel SPAS-12 heavier than single-barrel and wraps wide on torso */
     EXPECT_TRUE(LH_L1VR_ProcessWeaponEvent("events/shotgun1.sc", 0.0f, 0, 0, 0, false, false), "Shotgun 1x");
     size_t n1 = recv_packets(rx, 8);
     float e1 = rx[0].payload.synth.energy;
@@ -300,6 +303,16 @@ static void test_weapons_and_handedness(void) {
     size_t n2 = recv_packets(rx, 8);
     float e2 = rx[0].payload.synth.energy;
     EXPECT_TRUE(n2 >= 2 && e2 > e1, "Double-barrel stronger than single");
+    EXPECT_TRUE(rx[1].zone_hint == LH_ZONE_TORSO && rx[1].spread_radius >= 1.0f,
+                "Double-barrel heavy kick wraps torso via wide spread");
+
+    /* 3b. Reload/Clip clicks with 2H stabilisation must NOT trigger shoulder stock kick */
+    const float origin[3] = { 0.0f, 0.0f, 0.0f };
+    EXPECT_TRUE(LH_L1VR_ProcessSound("weapons/reload1.wav", origin, true, origin, 28.0f, 0.0f, false, true, false, 1.0f),
+                "ReloadClick 2H emitted");
+    n = recv_packets(rx, 8);
+    EXPECT_TRUE(n == 2 && rx[0].zone_hint == LH_ZONE_ARM_RIGHT && rx[1].zone_hint == LH_ZONE_ARM_LEFT,
+                "ReloadClick 2H emits arm+offhand only (no torso shoulder kick)");
 
     /* 4. RPG backblast (3 packets: arm PREFER_EMS, front shoulder & rear backblast SUPPRESS_EMS) */
     EXPECT_TRUE(LH_L1VR_ProcessWeaponEvent("events/rpg.sc", 0.0f, 0, 0, 0, false, false), "RPG");
@@ -361,15 +374,17 @@ static void test_sounds_explosions_and_frame_systems(void) {
     n = recv_packets(rx, 8);
     EXPECT_TRUE(n == 1 && rx[0].bus_id == LH_BUS_ENVIRONMENT && rx[0].entry_pos[2] > 0.3f && (rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Forward 3D blast SUPPRESS_EMS");
 
-    /* 4. Low-HP lub-dub Heartbeat + Xen Long-Jump + Geiger + menu pause (all SUPPRESS_EMS) */
+    /* 4. Low-HP lub-dub Heartbeat (upper-left chest Y >= 0.60) + Xen Long-Jump + Geiger + menu pause (all SUPPRESS_EMS) */
     const float vel_still[3] = { 0, 0, 0 };
     LH_L1VR_ProcessFrameState(1000, true, false, 15, 0, true, vel_still, false, false, true);
     n = recv_packets(rx, 8);
-    EXPECT_TRUE(n == 1 && rx[0].bus_id == LH_BUS_PLAYER_VITALS && (rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Heartbeat lub SUPPRESS_EMS");
+    EXPECT_TRUE(n == 1 && rx[0].bus_id == LH_BUS_PLAYER_VITALS && rx[0].entry_pos[1] >= 0.60f && (rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0,
+                "Heartbeat lub upper-left chest SUPPRESS_EMS");
 
     LH_L1VR_ProcessFrameState(1140, true, false, 15, 0, true, vel_still, false, false, true);
     n = recv_packets(rx, 8);
-    EXPECT_TRUE(n == 1 && rx[0].bus_id == LH_BUS_PLAYER_VITALS && (rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Heartbeat dub SUPPRESS_EMS");
+    EXPECT_TRUE(n == 1 && rx[0].bus_id == LH_BUS_PLAYER_VITALS && rx[0].entry_pos[1] >= 0.60f && (rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0,
+                "Heartbeat dub upper-left chest SUPPRESS_EMS");
 
     /* Xen Long-Jump velocity spike while airborne */
     const float vel_lj[3] = { 560.0f, 0.0f, 260.0f };
@@ -526,9 +541,12 @@ static void test_effect_hash_and_flashlight(void) {
     EXPECT_TRUE(rx[0].zone_hint == LH_ZONE_TORSO, "Flashlight targets upper torso/shoulder");
     EXPECT_TRUE((rx[0].flags & LH_FLAG_SUPPRESS_EMS) != 0, "Flashlight suppresses EMS");
     EXPECT_TRUE((rx[0].flags & LH_FLAG_ACTIVE_BRAKING) != 0, "Flashlight enables active braking");
-    EXPECT_TRUE(rx[0].entry_pos[0] < -0.40f, "Right-handed off-hand flashlight on left shoulder/chest");
-    EXPECT_TRUE(rx[0].payload.synth.energy >= 0.45f, "Flashlight energy perceptible on ERM");
-    EXPECT_TRUE(rx[0].payload.synth.decay_ms >= 60.0f, "Flashlight decay perceptible on ERM");
+    EXPECT_TRUE(rx[0].entry_pos[0] < -0.50f && rx[0].entry_pos[1] >= 0.70f,
+                "Right-handed off-hand flashlight on upper-left shoulder button");
+    EXPECT_TRUE(rx[0].payload.synth.energy >= 0.14f && rx[0].payload.synth.energy <= 0.24f,
+                "Flashlight energy subtle (not stronger than firearms)");
+    EXPECT_TRUE(rx[0].payload.synth.decay_ms >= 20.0f && rx[0].payload.synth.decay_ms <= 38.0f,
+                "Flashlight decay crisp and short");
     EXPECT_TRUE(rx[0].payload.synth.effect_hash == lh_fnv1a_hash("Flashlight"),
                 "Flashlight packet stamped with FNV-1a effect_hash");
 
